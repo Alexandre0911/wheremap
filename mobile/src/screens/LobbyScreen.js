@@ -13,7 +13,7 @@ export default function LobbyScreen({ navigation }) {
   const { lobby, participants, isHost, leaveLobby } = useApp();
 
   const handleStart = () => {
-    navigation.replace('Map');
+    navigation.navigate('Map');
   };
 
   const handleLeave = () => {

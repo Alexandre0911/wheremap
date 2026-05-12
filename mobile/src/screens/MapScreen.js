@@ -6,6 +6,9 @@ import {
   StyleSheet,
   Dimensions,
   AppState,
+  Linking,
+  Alert,
+  Platform,
 } from 'react-native';
 import MapView, { Marker, Callout } from 'react-native-maps';
 import { useApp } from '../context/AppContext';
@@ -96,6 +99,32 @@ export default function MapScreen({ navigation }) {
     };
   }, [updateLocation]);
 
+  const handleNavigateTo = useCallback((lat, lng, nickname) => {
+    const dest = `${lat},${lng}`;
+    const urlGoogle = `https://www.google.com/maps/dir/?api=1&destination=${dest}`;
+    const urlApple = `http://maps.apple.com/?daddr=${dest}`;
+    const urlWaze = `https://waze.com/ul?ll=${dest}&navigate=yes`;
+    
+    if (Platform.OS === 'ios') {
+      Alert.alert(`Navigate to ${nickname}`, 'Choose app', [
+        { text: 'Apple Maps', onPress: () => Linking.openURL(urlApple) },
+        { text: 'Google Maps', onPress: () => Linking.openURL(urlGoogle) },
+        { text: 'Waze', onPress: () => Linking.openURL(urlWaze) },
+        { text: 'Cancel', style: 'cancel' },
+      ]);
+    } else {
+      Alert.alert(`Navigate to ${nickname}`, 'Choose app', [
+        { text: 'Google Maps', onPress: () => Linking.openURL(urlGoogle) },
+        { text: 'Waze', onPress: () => Linking.openURL(urlWaze) },
+        { text: 'Cancel', style: 'cancel' },
+      ]);
+    }
+  }, []);
+
+  const handleGoBack = useCallback(() => {
+    navigation.goBack();
+  }, []);
+
   const handleLeave = useCallback(() => {
     stopWatchingLocation();
     leaveLobby();
@@ -147,6 +176,9 @@ export default function MapScreen({ navigation }) {
               description={
                 p.speed ? `${p.speed.toFixed(1)} km/h` : '0 km/h'
               }
+              onPress={() =>
+                handleNavigateTo(p.latitude, p.longitude, p.nickname)
+              }
             >
               <Callout tooltip>
                 <View style={styles.callout}>
@@ -161,6 +193,7 @@ export default function MapScreen({ navigation }) {
                     <Text style={styles.calloutSpeed}>
                       {p.speed ? `${p.speed.toFixed(1)} km/h` : '0 km/h'}
                     </Text>
+                    <Text style={styles.calloutHint}>Find</Text>
                   </View>
                 </View>
               </Callout>
@@ -173,8 +206,14 @@ export default function MapScreen({ navigation }) {
           style={styles.leaderboardBtn}
           onPress={handleLeaderboard}
         >
-          <Text style={styles.btnText}>Leaderboard</Text>
+          <Text style={styles.btnText}>🏆</Text>
         </TouchableOpacity>
+
+        <View style={styles.centerWrapper}>
+          <TouchableOpacity style={styles.lobbyBtn} onPress={handleGoBack}>
+            <Text style={styles.lobbyBtnText}>Lobby</Text>
+          </TouchableOpacity>
+        </View>
 
         <TouchableOpacity style={styles.leaveBtn} onPress={handleLeave}>
           <Text style={styles.leaveBtnText}>Leave</Text>
@@ -224,9 +263,22 @@ const styles = StyleSheet.create({
     right: 16,
     flexDirection: 'row',
     justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  centerWrapper: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    alignItems: 'center',
   },
   leaderboardBtn: {
     backgroundColor: '#e94560',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 10,
+  },
+  lobbyBtn: {
+    backgroundColor: '#0f3460',
     paddingHorizontal: 16,
     paddingVertical: 10,
     borderRadius: 10,
@@ -238,6 +290,7 @@ const styles = StyleSheet.create({
     borderRadius: 10,
   },
   btnText: { color: '#fff', fontWeight: '700', fontSize: 13 },
+  lobbyBtnText: { color: '#4ECDC4', fontWeight: '600', fontSize: 13 },
   leaveBtnText: { color: '#ccc', fontWeight: '600', fontSize: 13 },
   speedCard: {
     position: 'absolute',
@@ -312,4 +365,9 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     marginTop: 2,
   },
+  calloutHint: {
+    color: '#666',
+    fontSize: 10,
+    marginTop: 4,
+  }
 });
