@@ -7,9 +7,11 @@ import {
   StyleSheet,
   Share,
 } from 'react-native';
+import { useSafeAreaInsets} from 'react-native-safe-area-context';
 import { useApp } from '../context/AppContext';
 
 export default function LobbyScreen({ navigation }) {
+  const insets = useSafeAreaInsets();
   const { lobby, participants, isHost, leaveLobby } = useApp();
 
   const handleStart = () => {
@@ -31,7 +33,7 @@ export default function LobbyScreen({ navigation }) {
   };
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { paddingBottom: insets.bottom + 20 }]}>
       <View style={styles.header}>
         <Text style={styles.title}>Lobby</Text>
         {lobby?.pin && (

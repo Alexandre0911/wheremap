@@ -10,10 +10,12 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useApp } from '../context/AppContext';
 import ColorPicker from '../components/ColorPicker';
 
 export default function HomeScreen({ navigation }) {
+  const insets = useSafeAreaInsets();
   const {
     user,
     dispatch,
@@ -80,7 +82,7 @@ export default function HomeScreen({ navigation }) {
       style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
-      <View style={styles.content}>
+      <View style={[styles.content, { paddingBottom: insets.bottom + 20 }]}>
         <Text style={styles.title}>WhereMap</Text>
         <Text style={styles.subtitle}>Real-time location sharing</Text>
 
