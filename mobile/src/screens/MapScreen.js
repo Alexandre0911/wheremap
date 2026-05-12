@@ -10,7 +10,7 @@ import {
   Alert,
   Platform,
 } from 'react-native';
-import MapView, { Marker, Callout } from 'react-native-maps';
+import MapView, { Marker } from 'react-native-maps';
 import { useApp } from '../context/AppContext';
 import {
   requestLocationPermissions,
@@ -99,6 +99,16 @@ export default function MapScreen({ navigation }) {
     };
   }, [updateLocation]);
 
+  const [selectedPerson, setSelectedPerson] = useState(null);
+
+  const handleMarkerPress = useCallback((person) => {
+    setSelectedPerson(person);
+  }, []);
+
+  const handleClosePerson = useCallback(() => {
+    setSelectedPerson(null);
+  }, []);
+
   const handleNavigateTo = useCallback((lat, lng, nickname) => {
     const dest = `${lat},${lng}`;
     const urlGoogle = `https://www.google.com/maps/dir/?api=1&destination=${dest}`;
@@ -171,33 +181,8 @@ export default function MapScreen({ navigation }) {
                 latitude: p.latitude,
                 longitude: p.longitude,
               }}
-              pinColor={p.color}
-              title={p.nickname}
-              description={
-                p.speed ? `${p.speed.toFixed(1)} km/h` : '0 km/h'
-              }
-              onPress={() =>
-                handleNavigateTo(p.latitude, p.longitude, p.nickname)
-              }
-            >
-              <Callout tooltip>
-                <View style={styles.callout}>
-                  <View
-                    style={[
-                      styles.calloutDot,
-                      { backgroundColor: p.color },
-                    ]}
-                  />
-                  <View>
-                    <Text style={styles.calloutName}>{p.nickname}</Text>
-                    <Text style={styles.calloutSpeed}>
-                      {p.speed ? `${p.speed.toFixed(1)} km/h` : '0 km/h'}
-                    </Text>
-                    <Text style={styles.calloutHint}>Find</Text>
-                  </View>
-                </View>
-              </Callout>
-            </Marker>
+              onPress={() => handleMarkerPress(p)}
+              />
           ))}
       </MapView>
 
@@ -231,6 +216,36 @@ export default function MapScreen({ navigation }) {
           <Text style={styles.speedUnit}>km/h</Text>
         </View>
       </View>
+
+      {selectedPerson && (
+        <View style={styles.personCard}>
+          <View style={styles.personCardContent}>
+            <View style={[styles.personDot, { backgroundColor: selectedPerson.color }]} />
+            <View style={styles.personInfo}>
+              <Text style={styles.personName}>{selectedPerson.nickname}</Text>
+              <Text style={styles.personSpeed}>
+                {selectedPerson.speed ? `${selectedPerson.speed.toFixed(1)} km/h` : '0 km/h'}
+              </Text>
+            </View>
+            <TouchableOpacity
+              style={styles.navButton}
+              onPress={() => {
+                handleNavigateTo(
+                  selectedPerson.latitude,
+                  selectedPerson.longitude,
+                  selectedPerson.nickname
+                );
+                setSelectedPerson(null);
+              }}
+            >
+              <Text style={styles.navButtonText}>Navigate</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.closeBtn} onPress={handleClosePerson}>
+              <Text style={styles.closeBtnText}>x</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      )}
 
       {!hasPermission && (
         <View style={styles.permissionBanner}>
@@ -296,36 +311,94 @@ const styles = StyleSheet.create({
     position: 'absolute',
     bottom: 100,
     alignSelf: 'center',
-    backgroundColor: 'rgba(22,33,62,0.92)',
-    paddingHorizontal: 28,
-    paddingVertical: 14,
-    borderRadius: 16,
+    backgroundColor: 'rgba(22,33,62,0.9)',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 12,
     alignItems: 'center',
     borderWidth: 1,
     borderColor: '#0f3460',
   },
   speedLabel: {
     color: '#888',
-    fontSize: 10,
+    fontSize: 8,
     fontWeight: '600',
-    letterSpacing: 2,
-    marginBottom: 2,
+    letterSpacing: 1,
   },
   speedRow: {
     flexDirection: 'row',
     alignItems: 'baseline',
-    gap: 4,
+    gap: 3,
   },
   speedValue: {
     color: '#4ECDC4',
-    fontSize: 36,
+    fontSize: 22,
     fontWeight: '800',
     fontVariant: ['tabular-nums'],
   },
   speedUnit: {
     color: '#666',
-    fontSize: 14,
+    fontSize: 11,
     fontWeight: '600',
+  },
+  personCard: {
+    position: 'absolute',
+    bottom: 180,
+    left: 16,
+    right: 16,
+  },
+  personCardContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#16213e',
+    borderRadius: 14,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: '#0f3460',
+    gap: 10,
+  },
+  personDot: {
+    width: 14,
+    height: 14,
+    borderRadius: 7,
+  },
+  personInfo: {
+    flex: 1,
+  },
+  personName: {
+    color: '#fff',
+    fontWeight: '700',
+    fontSize: 15,
+  },
+  personSpeed: {
+    color: '#4ECDC4',
+    fontSize: 13,
+    fontWeight: '600',
+    marginTop: 2,
+  },
+  navButton: {
+    backgroundColor: '#e94560',
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 8,
+  },
+  navButtonText: {
+    color: '#fff',
+    fontWeight: '700',
+    fontSize: 13,
+  },
+  closeBtn: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: 'rgba(0,0,0,0.4)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  closeBtnText: {
+    color: '#888',
+    fontSize: 14,
+    fontWeight: '700',
   },
   permissionBanner: {
     position: 'absolute',
@@ -336,38 +409,4 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     borderRadius: 10,
   },
-  permissionText: { color: '#fff', fontSize: 13, fontWeight: '600' },
-  callout: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#16213e',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: '#0f3460',
-    gap: 8,
-    minWidth: 120,
-  },
-  calloutDot: {
-    width: 12,
-    height: 12,
-    borderRadius: 6,
-  },
-  calloutName: {
-    color: '#fff',
-    fontWeight: '700',
-    fontSize: 13,
-  },
-  calloutSpeed: {
-    color: '#4ECDC4',
-    fontSize: 12,
-    fontWeight: '600',
-    marginTop: 2,
-  },
-  calloutHint: {
-    color: '#666',
-    fontSize: 10,
-    marginTop: 4,
-  }
 });
