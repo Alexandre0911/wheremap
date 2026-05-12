@@ -17,6 +17,7 @@ import {
   startWatchingLocation,
   stopWatchingLocation,
 } from '../services/location';
+import { saveTopSpeed } from '../services/storage';
 
 const INITIAL_REGION = {
   latitude: 0,
@@ -57,6 +58,7 @@ export default function MapScreen({ navigation }) {
           if (!mounted) return;
           setMyLocation(loc);
           updateLocation(loc);
+          saveTopSpeed(loc.speed);
           setRegion((prev) => {
             if (!prev) {
               return {

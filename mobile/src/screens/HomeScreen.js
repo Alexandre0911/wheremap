@@ -13,6 +13,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useApp } from '../context/AppContext';
 import ColorPicker from '../components/ColorPicker';
+import { getTopSpeed } from '../services/storage';
 
 export default function HomeScreen({ navigation }) {
   const insets = useSafeAreaInsets();
@@ -33,6 +34,11 @@ export default function HomeScreen({ navigation }) {
   const [pin, setPin] = useState('');
   const [mode, setMode] = useState('create');
   const [loading, setLoading] = useState(false);
+  const [topSpeed, setTopSpeed] = useState(0);
+
+  useEffect(() => {
+    getTopSpeed().then(setTopSpeed);
+  }, []);
 
   useEffect(() => {
     connect();
@@ -96,6 +102,20 @@ export default function HomeScreen({ navigation }) {
           <Text style={styles.statusText}>
             {connected ? 'Connected' : 'Connecting...'}
           </Text>
+        </View>
+
+        <View style={styles.persistentSpeedRow}>
+          <Text style={styles.persistentSpeedLabel}>ALL-TIME TOP</Text>
+          {topSpeed > 0 ? (
+            <>
+              <Text style={styles.persistentSpeedValue}>
+                {topSpeed.toFixed(1)}
+              </Text>
+              <Text style={styles.persistentSpeedUnit}>km/h</Text>
+            </>
+          ) : (
+            <Text style={styles.persistentSpeedNone}>No Top Speed Recorded</Text>
+          )}
         </View>
 
         <View style={styles.section}>
@@ -225,6 +245,30 @@ const styles = StyleSheet.create({
     width: 8,
     height: 8,
     borderRadius: 4,
+  },
+  persistentSpeedRow: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    justifyContent: 'center',
+    marginBottom: 24,
+    gap: 6,
+  },
+  persistentSpeedLabel: {
+    color: '#555',
+    fontSize: 10,
+    fontWeight: '600',
+    letterSpacing: 1.5,
+  },
+  persistentSpeedValue: {
+    color: '#4ECDC4',
+    fontSize: 20,
+    fontWeight: '800',
+    fontVariant: ['tabular-nums'],
+  },
+  persistentSpeedUnit: {
+    color: '#555',
+    fontSize: 12,
+    fontWeight: '600',
   },
   statusText: {
     color: '#888',
