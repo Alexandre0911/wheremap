@@ -9,7 +9,7 @@ class LobbyManager {
   generatePin() {
     let pin;
     do {
-      pin = String(Math.floor(100000 + Math.random() * 900000));
+      pin = String(Math.floor(1 + Math.random() * 9999)).padStart(4, '0');
     } while (this.pinIndex.has(pin));
     return pin;
   }

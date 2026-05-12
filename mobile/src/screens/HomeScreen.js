@@ -70,8 +70,8 @@ export default function HomeScreen({ navigation }) {
       Alert.alert('Error', 'Please enter a nickname');
       return;
     }
-    if (pin.length !== 6) {
-      Alert.alert('Error', 'PIN must be exactly 6 digits');
+    if (pin.length !== 4) {
+      Alert.alert('Error', 'PIN must be exactly 4 digits');
       return;
     }
     setLoading(true);
@@ -164,7 +164,7 @@ export default function HomeScreen({ navigation }) {
           </TouchableOpacity>
         ) : (
           <View>
-            <TextInput style={styles.pinInput} value={pin} onChangeText={(t) => setPin(t.replace(/[^0-9]/g, '').slice(0, 6))} placeholder="000000" placeholderTextColor={theme.textMuted} keyboardType="number-pad" maxLength={6} />
+            <TextInput style={styles.pinInput} value={pin} onChangeText={(t) => setPin(t.replace(/[^0-9]/g, '').slice(0, 4))} placeholder="0000" placeholderTextColor={theme.textMuted} keyboardType="number-pad" maxLength={4} />
             <TouchableOpacity style={[styles.button, !connected && styles.buttonDisabled]} onPress={handleJoin} disabled={!connected || loading}>
               {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Join Lobby</Text>}
             </TouchableOpacity>

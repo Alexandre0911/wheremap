@@ -65,8 +65,8 @@ io.on('connection', (socket) => {
       socket.emit('error', { message: 'Nickname is required.' });
       return;
     }
-    if (!pin || pin.length !== 6) {
-      socket.emit('error', { message: 'Invalid PIN. Must be 6 digits.' });
+    if (!pin || pin.length !== 4) {
+      socket.emit('error', { message: 'Invalid PIN. Must be 4 digits.' });
       return;
     }
 

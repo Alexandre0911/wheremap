@@ -94,6 +94,14 @@ export default function MapScreen({ navigation }) {
     }
   }, []);
 
+  const getDistance = (lat1, lon1, lat2, lon2) => {
+    const R = 6371;
+    const dLat = (lat2 - lat1) * Math.PI / 180;
+    const dLon = (lon2 - lon1) * Math.PI / 180;
+    const a = Math.sin(dLat / 2) ** 2 + Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLon / 2) ** 2;
+    return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  };
+
   const handleMarkerPress = useCallback((person) => setSelectedPerson(person), []);
   const handleClosePerson = useCallback(() => setSelectedPerson(null), []);
   const handleGoBack = useCallback(() => navigation.goBack(), [navigation]);
@@ -124,6 +132,7 @@ export default function MapScreen({ navigation }) {
     personInfo: { flex: 1 },
     personName: { color: theme.text, fontWeight: '700', fontSize: 15 },
     personSpeed: { color: theme.accent, fontSize: 13, fontWeight: '600', marginTop: 2 },
+    personDistance: { color: theme.textMuted, fontSize: 11, marginTop: 1 },
     navButton: { backgroundColor: theme.primary, paddingHorizontal: 14, paddingVertical: 8, borderRadius: 8 },
     navButtonText: { color: '#fff', fontWeight: '700', fontSize: 13 },
     closeBtn: { width: 24, height: 24, borderRadius: 12, backgroundColor: theme.overlayDark, justifyContent: 'center', alignItems: 'center' },
@@ -174,13 +183,16 @@ export default function MapScreen({ navigation }) {
         </View>
       </View>
 
-      {selectedPerson && (
+      {selectedPerson && myLocation && (() => {
+        const dist = getDistance(myLocation.latitude, myLocation.longitude, selectedPerson.latitude, selectedPerson.longitude);
+        return (
         <View style={styles.personCard}>
           <View style={styles.personCardContent}>
             <View style={[styles.personDot, { backgroundColor: selectedPerson.color }]} />
             <View style={styles.personInfo}>
               <Text style={styles.personName}>{selectedPerson.nickname}</Text>
               <Text style={styles.personSpeed}>{selectedPerson.speed ? `${selectedPerson.speed.toFixed(1)} km/h` : '0 km/h'}</Text>
+              <Text style={styles.personDistance}>{dist < 1 ? `${(dist * 1000).toFixed(0)} m` : `${dist.toFixed(2)} km`} away</Text>
             </View>
             <TouchableOpacity style={styles.navButton} onPress={() => { handleNavigateTo(selectedPerson.latitude, selectedPerson.longitude, selectedPerson.nickname); setSelectedPerson(null); }}>
               <Text style={styles.navButtonText}>Navigate</Text>
@@ -188,7 +200,8 @@ export default function MapScreen({ navigation }) {
             <TouchableOpacity style={styles.closeBtn} onPress={handleClosePerson}><Text style={styles.closeBtnText}>x</Text></TouchableOpacity>
           </View>
         </View>
-      )}
+      );
+      })()}
 
       {!hasPermission && (
         <View style={styles.permissionBanner}><Text style={styles.permissionText}>Location permission denied</Text></View>
