@@ -1,3 +1,4 @@
+require('dotenv').config()
 const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
@@ -12,6 +13,14 @@ const io = new Server(server, {
 });
 
 const lobbyManager = new LobbyManager();
+
+const permanentPin = process.env.PRIVATE_PIN;
+if (permanentPin) {
+  const permanent = lobbyManager.createPermanentLobby(permanentPin);
+  if (permanent) {
+    console.log(`[LOBBY] Permanent lobby created with PIN ${permanentPin}`);
+  }
+}
 
 app.get('/health', (_req, res) => {
   res.json({ status: 'ok', lobbies: lobbyManager.getActiveLobbyCount() });

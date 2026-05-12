@@ -20,6 +20,22 @@ class LobbyManager {
     const lobby = {
       id,
       pin,
+      permanent: false,
+      participants: new Map(),
+      createdAt: Date.now(),
+    };
+    this.lobbies.set(id, lobby);
+    this.pinIndex.set(pin, id);
+    return { id, pin };
+  }
+
+  createPermanentLobby(pin) {
+    const id = `permanent-${pin}`;
+    if (this.pinIndex.has(pin)) return null;
+    const lobby = {
+      id,
+      pin,
+      permanent: true,
       participants: new Map(),
       createdAt: Date.now(),
     };
@@ -49,7 +65,7 @@ class LobbyManager {
     const lobby = this.lobbies.get(lobbyId);
     if (!lobby) return null;
     lobby.participants.delete(participantId);
-    if (lobby.participants.size === 0) {
+    if (lobby.participants.size === 0 && !lobby.permanent) {
       this.lobbies.delete(lobbyId);
       this.pinIndex.delete(lobby.pin);
     }
