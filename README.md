@@ -1,6 +1,6 @@
-# P2P Location Sharing
+# WhereMap
 
-A cross-platform (Android + iOS) app for real-time location sharing in lobbies with speed leaderboards.
+A cross-platform (Android + iOS) app for real-time location sharing in lobbies with speed leaderboards. Built with assistance from artificial intelligence (Claude).
 
 ## Architecture
 
@@ -66,4 +66,10 @@ npx expo start
 - Live speedometer
 - Top-speed leaderboard (ranked)
 - Works in background (app state handled)
-- Dark theme throughout
+- Dark/light theme (follows device or manual toggle)
+
+## License
+
+This project is licensed under the **Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International License**.
+
+You are free to view, fork, study, and modify the code for **non-commercial purposes only**. Commercial use, distribution, or integration into commercial products is prohibited.
