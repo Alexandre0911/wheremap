@@ -20,7 +20,7 @@ export default function LobbyScreen({ navigation }) {
   const handleLeave = () => { leaveLobby(); navigation.replace('Home'); };
   const handleShare = async () => {
     if (!lobby?.pin) return;
-    try { await Share.share({ message: `Join my WhereMap lobby! PIN: ${lobby.pin}` }); } catch {}
+    try { await Share.share({ message: `Join my WhereMap lobby! PIN: ${lobby.pin}\n\nwheremap://join/${lobby.pin}` }); } catch {}
   };
 
   const styles = useMemo(() => StyleSheet.create({

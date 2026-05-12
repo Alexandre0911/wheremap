@@ -3,6 +3,7 @@
     "name": "WhereMap",
     "slug": "wheremap",
     "version": "1.0.0",
+    "scheme": "wheremap",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "dark",

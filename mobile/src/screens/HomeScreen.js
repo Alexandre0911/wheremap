@@ -16,7 +16,7 @@ import { useApp } from '../context/AppContext';
 import ColorPicker from '../components/ColorPicker';
 import { getTopSpeed } from '../services/storage';
 
-export default function HomeScreen({ navigation }) {
+export default function HomeScreen({ navigation, route }) {
   const insets = useSafeAreaInsets();
   const { theme, mode, toggleTheme } = useTheme();
   const {
@@ -50,6 +50,15 @@ export default function HomeScreen({ navigation }) {
   useEffect(() => {
     getTopSpeed().then(setTopSpeed);
   }, []);
+
+  useEffect(() => {
+    const incomingPin = route.params?.pin;
+    if (incomingPin) {
+      setPin(incomingPin);
+      setMode_('join');
+      navigation.setParams({ pin: undefined });
+    }
+  }, [route.params?.pin]);
 
   const handleCreate = () => {
     if (!nickname.trim()) {

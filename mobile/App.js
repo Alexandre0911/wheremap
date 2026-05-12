@@ -8,13 +8,16 @@ import HomeScreen from './src/screens/HomeScreen';
 import LobbyScreen from './src/screens/LobbyScreen';
 import MapScreen from './src/screens/MapScreen';
 import LeaderboardScreen from './src/screens/LeaderboardScreen';
+import JoinScreen from './src/screens/JoinScreen';
 
 const Stack = createNativeStackNavigator();
 
 const linking = {
+  prefixes: ['wheremap://'],
   config: {
     screens: {
       Home: '',
+      Join: 'join/:pin',
       Lobby: 'lobby',
       Map: 'map',
       Leaderboard: 'leaderboard',
@@ -53,6 +56,7 @@ function AppContent() {
         }}
       >
         <Stack.Screen name="Home" component={HomeScreen} />
+        <Stack.Screen name="Join" component={JoinScreen} />
         <Stack.Screen name="Lobby" component={LobbyScreen} />
         <Stack.Screen name="Map" component={MapScreen} />
         <Stack.Screen
