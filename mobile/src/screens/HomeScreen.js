@@ -53,7 +53,7 @@ export default function HomeScreen({ navigation }) {
       type: 'SET_USER',
       payload: { nickname: nickname.trim(), color: selectedColor },
     });
-    createLobby();
+    createLobby(nickname.trim(), selectedColor);
     setTimeout(() => setLoading(false), 3000);
   };
 
@@ -71,7 +71,7 @@ export default function HomeScreen({ navigation }) {
       type: 'SET_USER',
       payload: { nickname: nickname.trim(), color: selectedColor },
     });
-    joinLobby(pin);
+    joinLobby(pin, nickname.trim(), selectedColor);
     setTimeout(() => setLoading(false), 5000);
   };
 

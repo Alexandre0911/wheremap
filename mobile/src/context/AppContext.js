@@ -152,27 +152,24 @@ export function AppProvider({ children, serverUrl }) {
     return socket;
   }, [serverUrl]);
 
-  const createLobby = useCallback(() => {
+  const createLobby = useCallback((nickname, color) => {
     const socket = getSocket();
     if (!socket) return;
     socket.emit('create_lobby', {
-      nickname: state.user.nickname,
-      color: state.user.color,
+      nickname,
+      color,
     });
-  }, [state.user]);
+  }, []);
 
-  const joinLobby = useCallback(
-    (pin) => {
+  const joinLobby = useCallback((pin, nickname, color) => {
       const socket = getSocket();
       if (!socket) return;
       socket.emit('join_lobby', {
-        nickname: state.user.nickname,
-        color: state.user.color,
+        nickname,
+        color,
         pin,
       });
-    },
-    [state.user]
-  );
+    }, []);
 
   const updateLocation = useCallback(
     (location) => {
