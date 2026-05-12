@@ -1,0 +1,48 @@
+{
+  "expo": {
+    "name": "WhereMap",
+    "slug": "wheremap",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "dark",
+    "splash": {
+      "backgroundColor": "#1a1a2e"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "Share your location with others in the lobby.",
+        "NSLocationAlwaysAndWhenInUseUsageDescription": "Share your location with others in the lobby."
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#1a1a2e"
+      },
+      "permissions": [
+        "ACCESS_FINE_LOCATION",
+        "ACCESS_COARSE_LOCATION",
+        "android.permission.ACCESS_COARSE_LOCATION",
+        "android.permission.ACCESS_FINE_LOCATION"
+      ],
+      "usesCleartextTraffic": true,
+      "package": "com.alexandre0911.wheremap"
+    },
+    "plugins": [
+      [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": "Share your location with others in the lobby.",
+          "locationWhenInUsePermission": "Share your location with others in the lobby."
+        }
+      ],
+      "expo-asset"
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "7194bfd7-3da0-4543-9c61-5b273de9a293"
+      }
+    }
+  }
+}
