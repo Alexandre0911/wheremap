@@ -1,4 +1,4 @@
-require('dotenv').config()
+require('dotenv').config();
 const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
@@ -9,6 +9,7 @@ const ts = () => new Date().toLocaleTimeString();
 
 const app = express();
 app.use(cors());
+app.use(express.json());
 const server = http.createServer(app);
 const io = new Server(server, {
   cors: { origin: '*', methods: ['GET', 'POST'] },
@@ -20,7 +21,7 @@ const permanentPin = process.env.PRIVATE_PIN;
 if (permanentPin) {
   const permanent = lobbyManager.createPermanentLobby(permanentPin);
   if (permanent) {
-    console.log(`[LOBBY] Permanent lobby created with PIN ${permanentPin}`);
+    console.log(`[${ts()}] [LOBBY] Permanent lobby created with PIN ${permanentPin}`);
   }
 }
 
@@ -28,11 +29,22 @@ app.get('/health', (_req, res) => {
   res.json({ status: 'ok', lobbies: lobbyManager.getActiveLobbyCount() });
 });
 
+app.post('/api/location', (req, res) => {
+  const { lobbyId, participantId, latitude, longitude, speed } = req.body;
+  const participant = lobbyManager.updateLocation(lobbyId, participantId, latitude, longitude, speed);
+  if (participant) {
+    io.to(lobbyId).emit('location_update', { participantId, latitude, longitude, speed });
+  }
+  res.json({ ok: true });
+});
+
 io.on('connection', (socket) => {
   let currentLobbyId = null;
-  const participantId = socket.id;
+  let currentParticipantId = null;
 
-  socket.on('create_lobby', ({ nickname, color }) => {
+  const getParticipantId = (clientId) => clientId || socket.id;
+
+  socket.on('create_lobby', ({ nickname, color, participantId: clientId }) => {
     if (currentLobbyId) {
       socket.emit('error', { message: 'Already in a lobby. Leave first.' });
       return;
@@ -44,9 +56,10 @@ io.on('connection', (socket) => {
 
     const { id, pin } = lobbyManager.createLobby();
     currentLobbyId = id;
+    currentParticipantId = getParticipantId(clientId);
 
     const participant = {
-      id: participantId,
+      id: currentParticipantId,
       nickname: nickname.trim(),
       color: color || '#FF6B6B',
       latitude: 0,
@@ -67,7 +80,7 @@ io.on('connection', (socket) => {
     console.log(`[${ts()}] [LOBBY] Created ${id} PIN ${pin} by ${nickname}`);
   });
 
-  socket.on('join_lobby', ({ nickname, color, pin }) => {
+  socket.on('join_lobby', ({ nickname, color, pin, participantId: clientId }) => {
     if (currentLobbyId) {
       socket.emit('error', { message: 'Already in a lobby. Leave first.' });
       return;
@@ -88,8 +101,9 @@ io.on('connection', (socket) => {
     }
 
     currentLobbyId = lobby.id;
+    currentParticipantId = getParticipantId(clientId);
     const participant = {
-      id: participantId,
+      id: currentParticipantId,
       nickname: nickname.trim(),
       color: color || '#FF6B6B',
       latitude: 0,
@@ -113,28 +127,23 @@ io.on('connection', (socket) => {
   socket.on('leave_lobby', ({ lobbyId } = {}) => {
     if (!currentLobbyId) return;
     const lid = lobbyId || currentLobbyId;
-    const lobby = lobbyManager.removeParticipant(lid, participantId);
+    const lobby = lobbyManager.removeParticipant(lid, currentParticipantId);
     if (lobby) {
-      socket.to(lid).emit('participant_left', { participantId });
+      socket.to(lid).emit('participant_left', { participantId: currentParticipantId });
       socket.leave(lid);
     }
     currentLobbyId = null;
-    console.log(`[${ts()}] [LOBBY] ${participantId} left ${lid}`);
+    currentParticipantId = null;
+    console.log(`[${ts()}] [LOBBY] ${currentParticipantId} left ${lid}`);
   });
 
   socket.on('update_location', ({ lobbyId, latitude, longitude, speed }) => {
     if (!currentLobbyId || currentLobbyId !== lobbyId) return;
-    const updated = lobbyManager.updateLocation(
-      lobbyId,
-      participantId,
-      latitude,
-      longitude,
-      speed
-    );
+    const updated = lobbyManager.updateLocation(lobbyId, currentParticipantId, latitude, longitude, speed);
     if (!updated) return;
 
     socket.to(lobbyId).emit('location_update', {
-      participantId,
+      participantId: currentParticipantId,
       latitude,
       longitude,
       speed,
@@ -142,7 +151,7 @@ io.on('connection', (socket) => {
 
     if (speed > updated.topSpeed - 0.001) {
       io.to(lobbyId).emit('leaderboard_update', {
-        participantId,
+        participantId: currentParticipantId,
         nickname: updated.nickname,
         color: updated.color,
         topSpeed: updated.topSpeed,
@@ -159,15 +168,15 @@ io.on('connection', (socket) => {
 
   socket.on('disconnect', () => {
     if (currentLobbyId) {
-      const lobby = lobbyManager.removeParticipant(currentLobbyId, participantId);
+      const lobby = lobbyManager.removeParticipant(currentLobbyId, currentParticipantId);
       if (lobby) {
-        io.to(currentLobbyId).emit('participant_left', { participantId });
+        io.to(currentLobbyId).emit('participant_left', { participantId: currentParticipantId });
       }
     }
   });
 });
 
-const PORT = 8000;
+const PORT = process.env.PORT || 8000;
 server.listen(PORT, () => {
-  console.log(`[SERVER] Running on port ${PORT}`);
+  console.log(`[${ts()}] [SERVER] Running on port ${PORT}`);
 });

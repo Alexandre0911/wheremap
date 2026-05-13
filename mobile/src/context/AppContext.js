@@ -1,8 +1,9 @@
 import React, { createContext, useContext, useReducer, useCallback, useRef, useEffect } from 'react';
-import { Alert } from 'react-native';
+import { Alert, Platform } from 'react-native';
 import { connectSocket, getSocket, disconnectSocket } from '../services/socket';
 import { requestLocationPermissions, startWatchingLocation, stopWatchingLocation } from '../services/location';
-import { saveTopSpeed } from '../services/storage';
+import { saveTopSpeed, getParticipantId } from '../services/storage';
+import { startBackgroundTracking, stopBackgroundTracking } from '../services/backgroundLocation';
 
 const AppContext = createContext(null);
 
@@ -16,6 +17,7 @@ const initialState = {
   leaderboard: [],
   myLocation: null,
   hasLocationPermission: false,
+  bgTracking: false,
 };
 
 function reducer(state, action) {
@@ -30,6 +32,8 @@ function reducer(state, action) {
       return { ...state, myLocation: action.payload };
     case 'SET_LOCATION_PERMISSION':
       return { ...state, hasLocationPermission: action.payload };
+    case 'SET_BG_TRACKING':
+      return { ...state, bgTracking: action.payload };
     case 'LOBBY_CREATED':
       return {
         ...state,
@@ -45,29 +49,14 @@ function reducer(state, action) {
         isHost: false,
       };
     case 'PARTICIPANT_JOINED':
-      return {
-        ...state,
-        participants: [...state.participants, action.payload.participant],
-      };
+      return { ...state, participants: [...state.participants, action.payload.participant] };
     case 'PARTICIPANT_LEFT':
-      return {
-        ...state,
-        participants: state.participants.filter(
-          (p) => p.id !== action.payload.participantId
-        ),
-      };
+      return { ...state, participants: state.participants.filter((p) => p.id !== action.payload.participantId) };
     case 'LOCATION_UPDATE':
       return {
         ...state,
         participants: state.participants.map((p) =>
-          p.id === action.payload.participantId
-            ? {
-                ...p,
-                latitude: action.payload.latitude,
-                longitude: action.payload.longitude,
-                speed: action.payload.speed,
-              }
-            : p
+          p.id === action.payload.participantId ? { ...p, latitude: action.payload.latitude, longitude: action.payload.longitude, speed: action.payload.speed } : p
         ),
       };
     case 'LEADERBOARD_UPDATE':
@@ -75,19 +64,11 @@ function reducer(state, action) {
         ...state,
         leaderboard: action.payload.entries || state.leaderboard,
         participants: state.participants.map((p) =>
-          p.id === action.payload.participantId
-            ? { ...p, topSpeed: action.payload.topSpeed }
-            : p
+          p.id === action.payload.participantId ? { ...p, topSpeed: action.payload.topSpeed } : p
         ),
       };
     case 'LEAVE_LOBBY':
-      return {
-        ...state,
-        lobby: null,
-        participants: [],
-        isHost: false,
-        leaderboard: [],
-      };
+      return { ...state, lobby: null, participants: [], isHost: false, leaderboard: [] };
     default:
       return state;
   }
@@ -97,10 +78,15 @@ export function AppProvider({ children, serverUrl }) {
   const [state, dispatch] = useReducer(reducer, initialState);
   const hasBeenConnected = useRef(false);
   const rejoinKeyRef = useRef(null);
+  const participantIdRef = useRef(null);
+
+  // Load stable participant ID on mount
+  useEffect(() => {
+    getParticipantId().then((id) => { participantIdRef.current = id; });
+  }, []);
 
   const connect = useCallback(() => {
     const socket = connectSocket(serverUrl);
-
     socket.off('connect');
     socket.off('disconnect');
     socket.off('lobby_created');
@@ -118,7 +104,12 @@ export function AppProvider({ children, serverUrl }) {
       if (hasBeenConnected.current) {
         const key = rejoinKeyRef.current;
         if (key && key.pin) {
-          socket.emit('join_lobby', { pin: key.pin, nickname: key.nickname, color: key.color });
+          socket.emit('join_lobby', {
+            pin: key.pin,
+            nickname: key.nickname,
+            color: key.color,
+            participantId: key.participantId,
+          });
         }
       }
       hasBeenConnected.current = true;
@@ -149,15 +140,17 @@ export function AppProvider({ children, serverUrl }) {
   const createLobby = useCallback((nickname, color) => {
     const socket = getSocket();
     if (!socket) return;
-    rejoinKeyRef.current = { pin: null, nickname, color };
-    socket.emit('create_lobby', { nickname, color });
+    const pid = participantIdRef.current;
+    rejoinKeyRef.current = { pin: null, nickname, color, participantId: pid };
+    socket.emit('create_lobby', { nickname, color, participantId: pid });
   }, []);
 
   const joinLobby = useCallback((pin, nickname, color) => {
     const socket = getSocket();
     if (!socket) return;
-    rejoinKeyRef.current = { pin, nickname, color };
-    socket.emit('join_lobby', { nickname, color, pin });
+    const pid = participantIdRef.current;
+    rejoinKeyRef.current = { pin, nickname, color, participantId: pid };
+    socket.emit('join_lobby', { nickname, color, pin, participantId: pid });
   }, []);
 
   const updateLocation = useCallback((location) => {
@@ -185,7 +178,7 @@ export function AppProvider({ children, serverUrl }) {
     dispatch({ type: 'LEAVE_LOBBY' });
   }, []);
 
-  // Start/stop GPS when lobby changes
+  // Foreground GPS — start/stop when lobby changes
   useEffect(() => {
     if (!state.lobby) {
       stopWatchingLocation();
@@ -207,6 +200,25 @@ export function AppProvider({ children, serverUrl }) {
     })();
     return () => { mounted = false; stopWatchingLocation(); };
   }, [state.lobby, updateLocation]);
+
+  // Background GPS — start/stop when lobby changes
+  useEffect(() => {
+    if (!state.lobby) {
+      stopBackgroundTracking();
+      dispatch({ type: 'SET_BG_TRACKING', payload: false });
+      return;
+    }
+    if (!participantIdRef.current) return;
+    let mounted = true;
+    (async () => {
+      const ok = await startBackgroundTracking(serverUrl, state.lobby.id, participantIdRef.current);
+      if (!mounted) return;
+      dispatch({ type: 'SET_BG_TRACKING', payload: ok });
+    })();
+    // Don't stop on unmount — background tracking should persist
+    // even when navigating between screens. Only stop on leave lobby.
+    return () => { mounted = false; };
+  }, [state.lobby, serverUrl]);
 
   const value = {
     ...state,
