@@ -5,6 +5,8 @@ const { Server } = require('socket.io');
 const cors = require('cors');
 const LobbyManager = require('./lobby');
 
+const ts = () => new Date().toLocaleTimeString();
+
 const app = express();
 app.use(cors());
 const server = http.createServer(app);
@@ -62,7 +64,7 @@ io.on('connection', (socket) => {
       participants: lobbyManager.getParticipants(id),
     });
 
-    console.log(`[LOBBY] Created ${id} PIN ${pin} by ${nickname}`);
+    console.log(`[${ts()}] [LOBBY] Created ${id} PIN ${pin} by ${nickname}`);
   });
 
   socket.on('join_lobby', ({ nickname, color, pin }) => {
@@ -105,7 +107,7 @@ io.on('connection', (socket) => {
     });
 
     socket.to(lobby.id).emit('participant_joined', { participant });
-    console.log(`[LOBBY] ${nickname} joined ${lobby.id}`);
+    console.log(`[${ts()}] [LOBBY] ${nickname} joined ${lobby.id}`);
   });
 
   socket.on('leave_lobby', ({ lobbyId } = {}) => {
@@ -117,7 +119,7 @@ io.on('connection', (socket) => {
       socket.leave(lid);
     }
     currentLobbyId = null;
-    console.log(`[LOBBY] ${participantId} left ${lid}`);
+    console.log(`[${ts()}] [LOBBY] ${participantId} left ${lid}`);
   });
 
   socket.on('update_location', ({ lobbyId, latitude, longitude, speed }) => {
