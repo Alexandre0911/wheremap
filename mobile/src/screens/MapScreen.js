@@ -1,11 +1,10 @@
-import React, { useEffect, useRef, useState, useCallback, useMemo } from 'react';
+import React, { useRef, useState, useCallback, useMemo } from 'react';
 import {
   View,
   Text,
   TouchableOpacity,
   StyleSheet,
   Dimensions,
-  AppState,
   Linking,
   Alert,
   Platform,
@@ -13,65 +12,27 @@ import {
 import MapView, { Marker } from 'react-native-maps';
 import { useTheme } from '../context/ThemeContext';
 import { useApp } from '../context/AppContext';
-import {
-  requestLocationPermissions,
-  startWatchingLocation,
-  stopWatchingLocation,
-} from '../services/location';
-import { saveTopSpeed } from '../services/storage';
-
-const INITIAL_REGION = {
-  latitude: 0, longitude: 0,
-  latitudeDelta: 0.05, longitudeDelta: 0.05,
-};
 
 export default function MapScreen({ navigation }) {
   const { theme, isDark } = useTheme();
-  const { participants, socketId, updateLocation, requestLeaderboard, leaveLobby } = useApp();
+  const { participants, socketId, myLocation, hasLocationPermission, updateLocation, requestLeaderboard, leaveLobby } = useApp();
 
-  const [hasPermission, setHasPermission] = useState(false);
-  const [myLocation, setMyLocation] = useState(null);
-  const [region, setRegion] = useState(null);
   const [selectedPerson, setSelectedPerson] = useState(null);
   const mapRef = useRef(null);
-  const appState = useRef(AppState.currentState);
-  const wasTrackingRef = useRef(false);
 
   const otherParticipants = participants.filter((p) => p.id !== socketId);
 
-  useEffect(() => {
-    let mounted = true;
-    const init = async () => {
-      const granted = await requestLocationPermissions();
-      if (!mounted) return;
-      setHasPermission(granted);
-      if (granted) {
-        await startWatchingLocation((loc) => {
-          if (!mounted) return;
-          setMyLocation(loc);
-          updateLocation(loc);
-          saveTopSpeed(loc.speed);
-          setRegion((prev) => prev || {
-            latitude: loc.latitude, longitude: loc.longitude,
-            latitudeDelta: 0.01, longitudeDelta: 0.01,
-          });
-        });
-      }
-    };
-    init();
-    const sub = AppState.addEventListener('change', (nextState) => {
-      if (appState.current.match(/inactive|background/) && nextState === 'active') {
-        if (wasTrackingRef.current) {
-          startWatchingLocation((loc) => { setMyLocation(loc); updateLocation(loc); });
-        }
-      } else if (nextState.match(/inactive|background/)) {
-        wasTrackingRef.current = true;
-        stopWatchingLocation();
-      }
-      appState.current = nextState;
-    });
-    return () => { mounted = false; stopWatchingLocation(); sub.remove(); };
-  }, [updateLocation]);
+  const region = myLocation
+    ? { latitude: myLocation.latitude, longitude: myLocation.longitude, latitudeDelta: 0.01, longitudeDelta: 0.01 }
+    : null;
+
+  const getDistance = (lat1, lon1, lat2, lon2) => {
+    const R = 6371;
+    const dLat = (lat2 - lat1) * Math.PI / 180;
+    const dLon = (lon2 - lon1) * Math.PI / 180;
+    const a = Math.sin(dLat / 2) ** 2 + Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLon / 2) ** 2;
+    return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  };
 
   const handleNavigateTo = useCallback((lat, lng, nickname) => {
     const dest = `${lat},${lng}`;
@@ -94,19 +55,25 @@ export default function MapScreen({ navigation }) {
     }
   }, []);
 
-  const getDistance = (lat1, lon1, lat2, lon2) => {
-    const R = 6371;
-    const dLat = (lat2 - lat1) * Math.PI / 180;
-    const dLon = (lon2 - lon1) * Math.PI / 180;
-    const a = Math.sin(dLat / 2) ** 2 + Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLon / 2) ** 2;
-    return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-  };
-
   const handleMarkerPress = useCallback((person) => setSelectedPerson(person), []);
   const handleClosePerson = useCallback(() => setSelectedPerson(null), []);
   const handleGoBack = useCallback(() => navigation.goBack(), [navigation]);
-  const handleLeave = useCallback(() => { stopWatchingLocation(); leaveLobby(); navigation.replace('Home'); }, [leaveLobby, navigation]);
+  const handleLeave = useCallback(() => { leaveLobby(); navigation.replace('Home'); }, [leaveLobby, navigation]);
   const handleLeaderboard = useCallback(() => { requestLeaderboard(); navigation.navigate('Leaderboard'); }, [requestLeaderboard, navigation]);
+
+  const darkStyle = [
+    { elementType: 'geometry', stylers: [{ color: '#242f3e' }] },
+    { elementType: 'labels.text.fill', stylers: [{ color: '#746855' }] },
+    { elementType: 'labels.text.stroke', stylers: [{ color: '#242f3e' }] },
+    { featureType: 'road', elementType: 'geometry', stylers: [{ color: '#38414e' }] },
+    { featureType: 'road', elementType: 'geometry.stroke', stylers: [{ color: '#212a37' }] },
+    { featureType: 'road', elementType: 'labels.text.fill', stylers: [{ color: '#9ca5b3' }] },
+    { featureType: 'water', elementType: 'geometry', stylers: [{ color: '#17263c' }] },
+    { featureType: 'poi', elementType: 'geometry', stylers: [{ color: '#283d54' }] },
+    { featureType: 'transit', elementType: 'geometry', stylers: [{ color: '#2f3948' }] },
+  ];
+
+  const mapStyle = Platform.OS === 'android' && isDark ? darkStyle : undefined;
 
   const styles = useMemo(() => StyleSheet.create({
     container: { flex: 1 },
@@ -141,27 +108,13 @@ export default function MapScreen({ navigation }) {
     permissionText: { color: '#fff', fontSize: 13, fontWeight: '600' },
   }), [theme]);
 
-  const darkStyle = [
-    { elementType: 'geometry', stylers: [{ color: '#242f3e' }] },
-    { elementType: 'labels.text.fill', stylers: [{ color: '#746855' }] },
-    { elementType: 'labels.text.stroke', stylers: [{ color: '#242f3e' }] },
-    { featureType: 'road', elementType: 'geometry', stylers: [{ color: '#38414e' }] },
-    { featureType: 'road', elementType: 'geometry.stroke', stylers: [{ color: '#212a37' }] },
-    { featureType: 'road', elementType: 'labels.text.fill', stylers: [{ color: '#9ca5b3' }] },
-    { featureType: 'water', elementType: 'geometry', stylers: [{ color: '#17263c' }] },
-    { featureType: 'poi', elementType: 'geometry', stylers: [{ color: '#283d54' }] },
-    { featureType: 'transit', elementType: 'geometry', stylers: [{ color: '#2f3948' }] },
-  ];
-
-  const mapStyle = Platform.OS === 'android' && isDark ? darkStyle : undefined;
-
   if (!region) {
     return <View style={styles.loadingContainer}><Text style={styles.loadingText}>Acquiring GPS...</Text></View>;
   }
 
   return (
     <View style={styles.container}>
-      <MapView ref={mapRef} style={styles.map} initialRegion={region} region={region} onRegionChangeComplete={setRegion} showsUserLocation={hasPermission} showsMyLocationButton showsCompass customMapStyle={mapStyle} mapType={Platform.OS === 'ios' && isDark ? 'mutedStandard' : 'standard'}>
+      <MapView ref={mapRef} style={styles.map} initialRegion={region} showsUserLocation={hasLocationPermission} showsMyLocationButton showsCompass customMapStyle={mapStyle} mapType={Platform.OS === 'ios' && isDark ? 'mutedStandard' : 'standard'}>
         {otherParticipants.filter((p) => typeof p.latitude === 'number' && typeof p.longitude === 'number' && p.latitude !== 0 && p.longitude !== 0).map((p) => (
           <Marker key={p.id} coordinate={{ latitude: p.latitude, longitude: p.longitude }} pinColor={p.color} onPress={() => handleMarkerPress(p)} />
         ))}
@@ -200,10 +153,10 @@ export default function MapScreen({ navigation }) {
             <TouchableOpacity style={styles.closeBtn} onPress={handleClosePerson}><Text style={styles.closeBtnText}>x</Text></TouchableOpacity>
           </View>
         </View>
-      );
+        );
       })()}
 
-      {!hasPermission && (
+      {!hasLocationPermission && (
         <View style={styles.permissionBanner}><Text style={styles.permissionText}>Location permission denied</Text></View>
       )}
     </View>

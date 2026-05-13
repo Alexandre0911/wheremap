@@ -1,6 +1,8 @@
-import React, { createContext, useContext, useReducer, useCallback, useRef } from 'react';
+import React, { createContext, useContext, useReducer, useCallback, useRef, useEffect } from 'react';
 import { Alert } from 'react-native';
 import { connectSocket, getSocket, disconnectSocket } from '../services/socket';
+import { requestLocationPermissions, startWatchingLocation, stopWatchingLocation } from '../services/location';
+import { saveTopSpeed } from '../services/storage';
 
 const AppContext = createContext(null);
 
@@ -12,6 +14,8 @@ const initialState = {
   connected: false,
   isHost: false,
   leaderboard: [],
+  myLocation: null,
+  hasLocationPermission: false,
 };
 
 function reducer(state, action) {
@@ -22,6 +26,10 @@ function reducer(state, action) {
       return { ...state, socketId: action.payload };
     case 'SET_CONNECTED':
       return { ...state, connected: action.payload };
+    case 'SET_MY_LOCATION':
+      return { ...state, myLocation: action.payload };
+    case 'SET_LOCATION_PERMISSION':
+      return { ...state, hasLocationPermission: action.payload };
     case 'LOBBY_CREATED':
       return {
         ...state,
@@ -107,15 +115,10 @@ export function AppProvider({ children, serverUrl }) {
     socket.on('connect', () => {
       dispatch({ type: 'SET_SOCKET_ID', payload: socket.id });
       dispatch({ type: 'SET_CONNECTED', payload: true });
-
       if (hasBeenConnected.current) {
         const key = rejoinKeyRef.current;
         if (key && key.pin) {
-          socket.emit('join_lobby', {
-            pin: key.pin,
-            nickname: key.nickname,
-            color: key.color,
-          });
+          socket.emit('join_lobby', { pin: key.pin, nickname: key.nickname, color: key.color });
         }
       }
       hasBeenConnected.current = true;
@@ -128,42 +131,17 @@ export function AppProvider({ children, serverUrl }) {
 
     socket.on('lobby_created', (data) => {
       const key = rejoinKeyRef.current;
-      if (key) {
-        rejoinKeyRef.current = { ...key, pin: data.pin };
-      }
+      if (key) rejoinKeyRef.current = { ...key, pin: data.pin };
       dispatch({ type: 'LOBBY_CREATED', payload: data });
     });
 
-    socket.on('lobby_joined', (data) => {
-      dispatch({ type: 'LOBBY_JOINED', payload: data });
-    });
-
-    socket.on('participant_joined', (data) => {
-      dispatch({ type: 'PARTICIPANT_JOINED', payload: data });
-    });
-
-    socket.on('participant_left', (data) => {
-      dispatch({ type: 'PARTICIPANT_LEFT', payload: data });
-    });
-
-    socket.on('location_update', (data) => {
-      dispatch({ type: 'LOCATION_UPDATE', payload: data });
-    });
-
-    socket.on('leaderboard', (data) => {
-      dispatch({
-        type: 'LEADERBOARD_UPDATE',
-        payload: { entries: data.entries },
-      });
-    });
-
-    socket.on('leaderboard_update', (data) => {
-      dispatch({ type: 'LEADERBOARD_UPDATE', payload: data });
-    });
-
-    socket.on('error', ({ message }) => {
-      Alert.alert('Error', message);
-    });
+    socket.on('lobby_joined', (data) => dispatch({ type: 'LOBBY_JOINED', payload: data }));
+    socket.on('participant_joined', (data) => dispatch({ type: 'PARTICIPANT_JOINED', payload: data }));
+    socket.on('participant_left', (data) => dispatch({ type: 'PARTICIPANT_LEFT', payload: data }));
+    socket.on('location_update', (data) => dispatch({ type: 'LOCATION_UPDATE', payload: data }));
+    socket.on('leaderboard', (data) => dispatch({ type: 'LEADERBOARD_UPDATE', payload: { entries: data.entries } }));
+    socket.on('leaderboard_update', (data) => dispatch({ type: 'LEADERBOARD_UPDATE', payload: data }));
+    socket.on('error', ({ message }) => Alert.alert('Error', message));
 
     return socket;
   }, [serverUrl]);
@@ -182,17 +160,11 @@ export function AppProvider({ children, serverUrl }) {
     socket.emit('join_lobby', { nickname, color, pin });
   }, []);
 
-  const updateLocation = useCallback(
-    (location) => {
-      const socket = getSocket();
-      if (!socket || !state.lobby) return;
-      socket.emit('update_location', {
-        lobbyId: state.lobby.id,
-        ...location,
-      });
-    },
-    [state.lobby]
-  );
+  const updateLocation = useCallback((location) => {
+    const socket = getSocket();
+    if (!socket || !state.lobby) return;
+    socket.emit('update_location', { lobbyId: state.lobby.id, ...location });
+  }, [state.lobby]);
 
   const requestLeaderboard = useCallback(() => {
     const socket = getSocket();
@@ -202,9 +174,7 @@ export function AppProvider({ children, serverUrl }) {
 
   const leaveLobby = useCallback(() => {
     const socket = getSocket();
-    if (socket && state.lobby) {
-      socket.emit('leave_lobby', { lobbyId: state.lobby.id });
-    }
+    if (socket && state.lobby) socket.emit('leave_lobby', { lobbyId: state.lobby.id });
     rejoinKeyRef.current = null;
     dispatch({ type: 'LEAVE_LOBBY' });
   }, [state.lobby]);
@@ -214,6 +184,29 @@ export function AppProvider({ children, serverUrl }) {
     rejoinKeyRef.current = null;
     dispatch({ type: 'LEAVE_LOBBY' });
   }, []);
+
+  // Start/stop GPS when lobby changes
+  useEffect(() => {
+    if (!state.lobby) {
+      stopWatchingLocation();
+      return;
+    }
+    let mounted = true;
+    (async () => {
+      const granted = await requestLocationPermissions();
+      if (!mounted) return;
+      dispatch({ type: 'SET_LOCATION_PERMISSION', payload: granted });
+      if (granted) {
+        await startWatchingLocation((loc) => {
+          if (!mounted) return;
+          dispatch({ type: 'SET_MY_LOCATION', payload: loc });
+          updateLocation(loc);
+          saveTopSpeed(loc.speed);
+        });
+      }
+    })();
+    return () => { mounted = false; stopWatchingLocation(); };
+  }, [state.lobby, updateLocation]);
 
   const value = {
     ...state,
@@ -232,8 +225,6 @@ export function AppProvider({ children, serverUrl }) {
 
 export function useApp() {
   const ctx = useContext(AppContext);
-  if (!ctx) {
-    throw new Error('useApp must be used within AppProvider');
-  }
+  if (!ctx) throw new Error('useApp must be used within AppProvider');
   return ctx;
 }
