@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useReducer, useCallback } from 'react';
+import React, { createContext, useContext, useReducer, useCallback, useRef } from 'react';
 import { Alert } from 'react-native';
 import { connectSocket, getSocket, disconnectSocket } from '../services/socket';
 
@@ -72,8 +72,6 @@ function reducer(state, action) {
             : p
         ),
       };
-    case 'SET_PARTICIPANTS':
-      return { ...state, participants: action.payload };
     case 'LEAVE_LOBBY':
       return {
         ...state,
@@ -89,6 +87,8 @@ function reducer(state, action) {
 
 export function AppProvider({ children, serverUrl }) {
   const [state, dispatch] = useReducer(reducer, initialState);
+  const hasBeenConnected = useRef(false);
+  const rejoinKeyRef = useRef(null);
 
   const connect = useCallback(() => {
     const socket = connectSocket(serverUrl);
@@ -107,6 +107,18 @@ export function AppProvider({ children, serverUrl }) {
     socket.on('connect', () => {
       dispatch({ type: 'SET_SOCKET_ID', payload: socket.id });
       dispatch({ type: 'SET_CONNECTED', payload: true });
+
+      if (hasBeenConnected.current) {
+        const key = rejoinKeyRef.current;
+        if (key && key.pin) {
+          socket.emit('join_lobby', {
+            pin: key.pin,
+            nickname: key.nickname,
+            color: key.color,
+          });
+        }
+      }
+      hasBeenConnected.current = true;
     });
 
     socket.on('disconnect', () => {
@@ -115,6 +127,10 @@ export function AppProvider({ children, serverUrl }) {
     });
 
     socket.on('lobby_created', (data) => {
+      const key = rejoinKeyRef.current;
+      if (key) {
+        rejoinKeyRef.current = { ...key, pin: data.pin };
+      }
       dispatch({ type: 'LOBBY_CREATED', payload: data });
     });
 
@@ -155,21 +171,16 @@ export function AppProvider({ children, serverUrl }) {
   const createLobby = useCallback((nickname, color) => {
     const socket = getSocket();
     if (!socket) return;
-    socket.emit('create_lobby', {
-      nickname,
-      color,
-    });
+    rejoinKeyRef.current = { pin: null, nickname, color };
+    socket.emit('create_lobby', { nickname, color });
   }, []);
 
   const joinLobby = useCallback((pin, nickname, color) => {
-      const socket = getSocket();
-      if (!socket) return;
-      socket.emit('join_lobby', {
-        nickname,
-        color,
-        pin,
-      });
-    }, []);
+    const socket = getSocket();
+    if (!socket) return;
+    rejoinKeyRef.current = { pin, nickname, color };
+    socket.emit('join_lobby', { nickname, color, pin });
+  }, []);
 
   const updateLocation = useCallback(
     (location) => {
@@ -194,11 +205,13 @@ export function AppProvider({ children, serverUrl }) {
     if (socket && state.lobby) {
       socket.emit('leave_lobby', { lobbyId: state.lobby.id });
     }
+    rejoinKeyRef.current = null;
     dispatch({ type: 'LEAVE_LOBBY' });
   }, [state.lobby]);
 
   const disconnect = useCallback(() => {
     disconnectSocket();
+    rejoinKeyRef.current = null;
     dispatch({ type: 'LEAVE_LOBBY' });
   }, []);
 
