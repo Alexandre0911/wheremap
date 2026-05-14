@@ -14,7 +14,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../context/ThemeContext';
 import { useApp } from '../context/AppContext';
 import ColorPicker from '../components/ColorPicker';
-import { getTopSpeed } from '../services/storage';
+import { getTopSpeed, getSavedNickname, getSavedColor, saveNickname, saveColor } from '../services/storage';
 
 export default function HomeScreen({ navigation, route }) {
   const insets = useSafeAreaInsets();
@@ -48,7 +48,12 @@ export default function HomeScreen({ navigation, route }) {
   }, [lobby, navigation]);
 
   useEffect(() => {
-    getTopSpeed().then(setTopSpeed);
+    (async () => {
+    const [speed, savedName, savedCol] = await Promise.all([getTopSpeed(), getSavedNickname(), getSavedColor()]);
+    setTopSpeed(speed);
+    if (savedName) setNickname(savedName);
+    if (savedCol) setSelectedColor(savedCol);
+  })();
   }, []);
 
   useEffect(() => {
@@ -70,6 +75,8 @@ export default function HomeScreen({ navigation, route }) {
       type: 'SET_USER',
       payload: { nickname: nickname.trim(), color: selectedColor },
     });
+    saveNickname(nickname.trim());
+    saveColor(selectedColor);
     createLobby(nickname.trim(), selectedColor);
     setTimeout(() => setLoading(false), 3000);
   };
@@ -88,6 +95,8 @@ export default function HomeScreen({ navigation, route }) {
       type: 'SET_USER',
       payload: { nickname: nickname.trim(), color: selectedColor },
     });
+    saveNickname(nickname.trim());
+    saveColor(selectedColor);
     joinLobby(pin, nickname.trim(), selectedColor);
     setTimeout(() => setLoading(false), 5000);
   };

@@ -18,6 +18,8 @@ export default function MapScreen({ navigation }) {
   const { participants, participantId, myLocation, hasLocationPermission, requestLeaderboard, leaveLobby } = useApp();
 
   const otherParticipants = participants.filter((p) => p.id !== participantId);
+  const [selectedPerson, setSelectedPerson] = useState(null);
+  const mapRef = useRef(null);
 
   const region = myLocation
     ? { latitude: myLocation.latitude, longitude: myLocation.longitude, latitudeDelta: 0.01, longitudeDelta: 0.01 }

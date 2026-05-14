@@ -2,6 +2,8 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const TOP_SPEED_KEY = '@wheremap/top_speed';
 const PARTICIPANT_KEY = '@wheremap/participant_id';
+const NICKNAME_KEY = '@wheremap/nickname';
+const COLOR_KEY = '@wheremap/color';
 
 export async function getTopSpeed() {
   try {
@@ -10,6 +12,34 @@ export async function getTopSpeed() {
   } catch {
     return 0;
   }
+}
+
+export async function getSavedNickname() {
+  try {
+    return await AsyncStorage.getItem(NICKNAME_KEY) || '';
+  } catch {
+    return '';
+  }
+}
+
+export async function saveNickname(name) {
+  try {
+    await AsyncStorage.setItem(NICKNAME_KEY, name);
+  } catch {}
+}
+
+export async function getSavedColor() {
+  try {
+    return await AsyncStorage.getItem(COLOR_KEY) || '#FF6B6B';
+  } catch {
+    return '#FF6B6B';
+  }
+}
+
+export async function saveColor(color) {
+  try {
+    await AsyncStorage.setItem(COLOR_KEY, color);
+  } catch {}
 }
 
 export async function saveTopSpeed(speed) {
