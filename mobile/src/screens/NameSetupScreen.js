@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   View,
   Text,
@@ -12,16 +12,20 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../context/ThemeContext';
+import { useApp } from '../context/AppContext';
 import { getSocket } from '../services/socket';
 import { saveDisplayId } from '../services/storage';
 
 export default function NameSetupScreen({ navigation }) {
   const insets = useSafeAreaInsets();
   const { theme } = useTheme();
+  const { connect, connected } = useApp();
   const [name, setName] = useState('');
   const [step, setStep] = useState('input');
   const [loading, setLoading] = useState(false);
   const confirmedName = useRef('');
+
+  useEffect(() => { connect(); }, [connect]);
 
   const handleCheck = async () => {
     const trimmed = name.trim();
@@ -110,6 +114,10 @@ export default function NameSetupScreen({ navigation }) {
       <View style={[styles.content, { paddingBottom: insets.bottom + 20 }]}>
         <Text style={styles.title}>Welcome to WhereMap</Text>
         <Text style={styles.subtitle}>Choose your permanent name</Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginBottom: 20, gap: 6 }}>
+          <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: connected ? '#1DD1A1' : '#FF6B6B' }} />
+          <Text style={{ color: theme.textSecondary, fontSize: 12 }}>{connected ? 'Connected' : 'Connecting...'}</Text>
+        </View>
         <Text style={styles.label}>Permanent Name</Text>
         <TextInput
           style={styles.input}
@@ -121,7 +129,7 @@ export default function NameSetupScreen({ navigation }) {
           autoCapitalize="none"
           autoFocus
         />
-        <TouchableOpacity style={styles.button} onPress={handleCheck} disabled={loading}>
+        <TouchableOpacity style={[styles.button, !connected && { opacity: 0.4 }]} onPress={handleCheck} disabled={loading || !connected}>
           {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Next</Text>}
         </TouchableOpacity>
       </View>
