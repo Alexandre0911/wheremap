@@ -14,7 +14,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../context/ThemeContext';
 import { useApp } from '../context/AppContext';
 import ColorPicker from '../components/ColorPicker';
-import { getTopSpeed, getSavedNickname, getSavedColor, saveNickname, saveColor } from '../services/storage';
+import { getTopSpeed, getSavedNickname, getSavedColor, getDisplayId, saveNickname, saveColor } from '../services/storage';
 
 export default function HomeScreen({ navigation, route }) {
   const insets = useSafeAreaInsets();
@@ -35,25 +35,16 @@ export default function HomeScreen({ navigation, route }) {
   const [mode_, setMode_] = useState('create');
   const [loading, setLoading] = useState(false);
   const [topSpeed, setTopSpeed] = useState(0);
-
-  useEffect(() => {
-    connect();
-  }, [connect]);
-
-  useEffect(() => {
-    if (lobby) {
-      setLoading(false);
-      navigation.replace('Lobby');
-    }
-  }, [lobby, navigation]);
+  const [displayId, setDisplayId] = useState('');
 
   useEffect(() => {
     (async () => {
-    const [speed, savedName, savedCol] = await Promise.all([getTopSpeed(), getSavedNickname(), getSavedColor()]);
+    const [speed, savedName, savedCol, permName] = await Promise.all([getTopSpeed(), getSavedNickname(), getSavedColor(), getDisplayId()]);
     setTopSpeed(speed);
+    setDisplayId(permName || '');
     if (savedName) setNickname(savedName);
     if (savedCol) setSelectedColor(savedCol);
-  })();
+    })();
   }, []);
 
   useEffect(() => {
@@ -106,6 +97,9 @@ export default function HomeScreen({ navigation, route }) {
     content: { flex: 1, padding: 24, justifyContent: 'center' },
     title: { fontSize: 34, fontWeight: '800', color: theme.text, textAlign: 'center', letterSpacing: 1 },
     subtitle: { fontSize: 15, color: theme.textSecondary, textAlign: 'center', marginBottom: 28 },
+    displayIdLabel: { fontSize: 10, color: theme.textMuted, textAlign: 'center', textTransform: 'uppercase', letterSpacing: 1.5, marginBottom: 2 },
+    displayId: { fontSize: 14, color: theme.accent, textAlign: 'center', fontWeight: '700', letterSpacing: 2, marginBottom: 2 },
+    displayIdWarning: { fontSize: 10, color: theme.textMuted, textAlign: 'center', fontStyle: 'italic', marginBottom: 20 },
     statusRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginBottom: 28, gap: 8 },
     dot: { width: 8, height: 8, borderRadius: 4 },
     statusText: { color: theme.textSecondary, fontSize: 13 },
@@ -139,6 +133,9 @@ export default function HomeScreen({ navigation, route }) {
       <View style={[styles.content, { paddingBottom: insets.bottom + 20 }]}>
         <Text style={styles.title}>WhereMap</Text>
         <Text style={styles.subtitle}>Real-time location sharing</Text>
+        <Text style={styles.displayIdLabel}>Your permanent name</Text>
+        <Text style={styles.displayId}>{displayId}</Text>
+        <Text style={styles.displayIdWarning}>This name is permanent and cannot be changed</Text>
 
         <View style={styles.statusRow}>
           <View style={[styles.dot, { backgroundColor: connected ? theme.accentAlt : theme.danger }]} />

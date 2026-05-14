@@ -42,6 +42,23 @@ io.on('connection', (socket) => {
   let currentLobbyId = null;
   let currentParticipantId = null;
 
+  socket.on('request_id', () => {
+    const id = lobbyManager.generateDisplayId();
+    socket.emit('id_generated', { id });
+    console.log(`[${ts()}] [ID] Generated ${id}`);
+  });
+
+  socket.on('check_name', (name, callback) => {
+    const taken = lobbyManager.isNameTaken(name);
+    if (typeof callback === 'function') callback(taken);
+  });
+
+  socket.on('claim_name', (name, callback) => {
+    const success = lobbyManager.claimName(name);
+    if (typeof callback === 'function') callback(success);
+    if (success) console.log(`[${ts()}] [NAME] Claimed: ${name}`);
+  });
+
   const getParticipantId = (clientId) => clientId || socket.id;
 
   socket.on('create_lobby', ({ nickname, color, participantId: clientId }) => {

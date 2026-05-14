@@ -1,21 +1,24 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
+import { View, ActivityIndicator } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { AppProvider } from './src/context/AppContext';
 import { ThemeProvider, useTheme } from './src/context/ThemeContext';
+import NameSetupScreen from './src/screens/NameSetupScreen';
 import HomeScreen from './src/screens/HomeScreen';
 import LobbyScreen from './src/screens/LobbyScreen';
 import MapScreen from './src/screens/MapScreen';
 import LeaderboardScreen from './src/screens/LeaderboardScreen';
 import JoinScreen from './src/screens/JoinScreen';
+import { getDisplayId } from './src/services/storage';
 
 const Stack = createNativeStackNavigator();
 
 const linking = {
-  prefixes: ['wheremap://'],
   config: {
     screens: {
+      NameSetup: 'setup',
       Home: '',
       Join: 'join/:pin',
       Lobby: 'lobby',
@@ -27,6 +30,11 @@ const linking = {
 
 function AppContent() {
   const { theme, isDark } = useTheme();
+  const [initialRoute, setInitialRoute] = useState(null);
+
+  useEffect(() => {
+    getDisplayId().then((id) => setInitialRoute(id ? 'Home' : 'NameSetup'));
+  }, []);
 
   const navTheme = {
     dark: isDark,
@@ -46,24 +54,26 @@ function AppContent() {
     },
   };
 
+  if (!initialRoute) {
+    return (
+      <View style={{ flex: 1, backgroundColor: theme.background, justifyContent: 'center', alignItems: 'center' }}>
+        <ActivityIndicator size="large" color={theme.primary} />
+      </View>
+    );
+  }
+
   return (
     <NavigationContainer theme={navTheme} linking={linking}>
       <Stack.Navigator
-        initialRouteName="Home"
-        screenOptions={{
-          headerShown: false,
-          animation: 'slide_from_right',
-        }}
+        initialRouteName={initialRoute}
+        screenOptions={{ headerShown: false, animation: 'slide_from_right' }}
       >
+        <Stack.Screen name="NameSetup" component={NameSetupScreen} />
         <Stack.Screen name="Home" component={HomeScreen} />
         <Stack.Screen name="Join" component={JoinScreen} />
         <Stack.Screen name="Lobby" component={LobbyScreen} />
         <Stack.Screen name="Map" component={MapScreen} />
-        <Stack.Screen
-          name="Leaderboard"
-          component={LeaderboardScreen}
-          options={{ presentation: 'modal' }}
-        />
+        <Stack.Screen name="Leaderboard" component={LeaderboardScreen} options={{ presentation: 'modal' }} />
       </Stack.Navigator>
       <StatusBar style={isDark ? 'light' : 'dark'} />
     </NavigationContainer>

@@ -1,9 +1,24 @@
 const crypto = require('crypto');
 
+const ID_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+
 class LobbyManager {
   constructor() {
     this.lobbies = new Map();
     this.pinIndex = new Map();
+    this.claimedIds = new Set();
+    this.permanentNames = new Map();
+  }
+
+  generateDisplayId() {
+    let id;
+    do {
+      let code = '';
+      for (let i = 0; i < 6; i++) code += ID_CHARS[Math.floor(Math.random() * ID_CHARS.length)];
+      id = 'WM-' + code;
+    } while (this.claimedIds.has(id));
+    this.claimedIds.add(id);
+    return id;
   }
 
   generatePin() {
@@ -108,6 +123,17 @@ class LobbyManager {
 
   getActiveLobbyCount() {
     return this.lobbies.size;
+  }
+
+  isNameTaken(name) {
+    return this.permanentNames.has(name.toLowerCase().trim());
+  }
+
+  claimName(name) {
+    const key = name.toLowerCase().trim();
+    if (this.permanentNames.has(key)) return false;
+    this.permanentNames.set(key, true);
+    return true;
   }
 }
 
