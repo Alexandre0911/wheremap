@@ -9,6 +9,7 @@ const AppContext = createContext(null);
 
 const initialState = {
   user: { nickname: '', color: '#FF6B6B' },
+  participantId: null,
   socketId: null,
   lobby: null,
   participants: [],
@@ -26,6 +27,8 @@ function reducer(state, action) {
       return { ...state, user: { ...state.user, ...action.payload } };
     case 'SET_SOCKET_ID':
       return { ...state, socketId: action.payload };
+    case 'SET_PARTICIPANT_ID':
+      return { ...state, participantId: action.payload };
     case 'SET_CONNECTED':
       return { ...state, connected: action.payload };
     case 'SET_MY_LOCATION':
@@ -82,7 +85,7 @@ export function AppProvider({ children, serverUrl }) {
 
   // Load stable participant ID on mount
   useEffect(() => {
-    getParticipantId().then((id) => { participantIdRef.current = id; });
+    getParticipantId().then((id) => { participantIdRef.current = id; dispatch({ type: 'SET_PARTICIPANT_ID', payload: id }); });
   }, []);
 
   const connect = useCallback(() => {

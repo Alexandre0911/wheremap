@@ -15,12 +15,9 @@ import { useApp } from '../context/AppContext';
 
 export default function MapScreen({ navigation }) {
   const { theme, isDark } = useTheme();
-  const { participants, socketId, myLocation, hasLocationPermission, updateLocation, requestLeaderboard, leaveLobby } = useApp();
+  const { participants, participantId, myLocation, hasLocationPermission, requestLeaderboard, leaveLobby } = useApp();
 
-  const [selectedPerson, setSelectedPerson] = useState(null);
-  const mapRef = useRef(null);
-
-  const otherParticipants = participants.filter((p) => p.id !== socketId);
+  const otherParticipants = participants.filter((p) => p.id !== participantId);
 
   const region = myLocation
     ? { latitude: myLocation.latitude, longitude: myLocation.longitude, latitudeDelta: 0.01, longitudeDelta: 0.01 }
