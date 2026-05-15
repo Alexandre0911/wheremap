@@ -5,12 +5,6 @@ import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { AppProvider } from './src/context/AppContext';
 import { ThemeProvider, useTheme } from './src/context/ThemeContext';
-import NameSetupScreen from './src/screens/NameSetupScreen';
-import HomeScreen from './src/screens/HomeScreen';
-import LobbyScreen from './src/screens/LobbyScreen';
-import MapScreen from './src/screens/MapScreen';
-import LeaderboardScreen from './src/screens/LeaderboardScreen';
-import JoinScreen from './src/screens/JoinScreen';
 import { getDisplayId } from './src/services/storage';
 
 const Stack = createNativeStackNavigator();
@@ -30,6 +24,7 @@ const linking = {
 
 function AppContent() {
   const { theme, isDark } = useTheme();
+  const { connect } = useApp();
   const [initialRoute, setInitialRoute] = useState(null);
 
   useEffect(() => {

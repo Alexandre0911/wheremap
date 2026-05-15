@@ -151,7 +151,7 @@ io.on('connection', (socket) => {
     }
     currentLobbyId = null;
     currentParticipantId = null;
-    console.log(`[${ts()}] [LOBBY] ${currentParticipantId} left ${lid}`);
+    console.log(`[${ts()}] [LOBBY] left ${lid}`);
   });
 
   socket.on('update_location', ({ lobbyId, latitude, longitude, speed }) => {
