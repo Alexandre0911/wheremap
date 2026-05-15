@@ -11,3 +11,5 @@ npm-debug.*
 web-build/
 .env
 mobile/src/config.js
+mobile/src/config.example.js
+server/.env.example
