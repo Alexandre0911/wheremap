@@ -6,6 +6,12 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { AppProvider, useApp } from './src/context/AppContext';
 import { ThemeProvider, useTheme } from './src/context/ThemeContext';
 import { getDisplayId } from './src/services/storage';
+import NameSetupScreen from './src/screens/NameSetupScreen';
+import HomeScreen from './src/screens/HomeScreen';
+import JoinScreen from './src/screens/JoinScreen';
+import LobbyScreen from './src/screens/LobbyScreen';
+import MapScreen from './src/screens/MapScreen';
+import LeaderboardScreen from './src/screens/LeaderboardScreen';
 
 const Stack = createNativeStackNavigator();
 
