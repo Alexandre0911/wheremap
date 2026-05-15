@@ -79,9 +79,10 @@ function reducer(state, action) {
 
 export function AppProvider({ children, serverUrl }) {
   const [state, dispatch] = useReducer(reducer, initialState);
-  const hasBeenConnected = useRef(false);
   const rejoinKeyRef = useRef(null);
   const participantIdRef = useRef(null);
+  const onLobbyCreatedRef = useRef(null);
+  const onLobbyJoinedRef = useRef(null);
 
   // Load stable participant ID on mount
   useEffect(() => {
@@ -104,17 +105,6 @@ export function AppProvider({ children, serverUrl }) {
     socket.on('connect', () => {
       dispatch({ type: 'SET_SOCKET_ID', payload: socket.id });
       dispatch({ type: 'SET_CONNECTED', payload: true });
-      if (hasBeenConnected.current) {
-        const key = rejoinKeyRef.current;
-        if (key && key.pin) {
-          socket.emit('join_lobby', {
-            pin: key.pin,
-            nickname: key.nickname,
-            color: key.color,
-            participantId: key.participantId,
-          });
-        }
-      }
       hasBeenConnected.current = true;
     });
 
@@ -127,7 +117,19 @@ export function AppProvider({ children, serverUrl }) {
       const key = rejoinKeyRef.current;
       if (key) rejoinKeyRef.current = { ...key, pin: data.pin };
       dispatch({ type: 'LOBBY_CREATED', payload: data });
+      if (onLobbyCreatedRef.current) {
+        onLobbyCreatedRef.current(data);
+        onLobbyCreatedRef.current = null;
+      }
     });
+
+    socket.on('lobby_joined', (data) => {
+    dispatch({ type: 'LOBBY_JOINED', payload: data });
+    if (onLobbyJoinedRef.current) {
+      onLobbyJoinedRef.current(data);
+      onLobbyJoinedRef.current = null;
+    }
+  });
 
     socket.on('lobby_joined', (data) => dispatch({ type: 'LOBBY_JOINED', payload: data }));
     socket.on('participant_joined', (data) => dispatch({ type: 'PARTICIPANT_JOINED', payload: data }));
@@ -137,22 +139,30 @@ export function AppProvider({ children, serverUrl }) {
     socket.on('leaderboard_update', (data) => dispatch({ type: 'LEADERBOARD_UPDATE', payload: data }));
     socket.on('error', ({ message }) => Alert.alert('Error', message));
 
+    // If already connected, dispatch instantly
+    if (socket.connected) {
+      dispatch({ type: 'SET_SOCKET_ID', payload: socket.id });
+      dispatch({ type: 'SET_CONNECTED', payload: true });
+    }
+
     return socket;
   }, [serverUrl]);
 
-  const createLobby = useCallback((nickname, color) => {
+  const createLobby = useCallback((nickname, color, onCreated) => {
     const socket = getSocket();
     if (!socket) return;
     const pid = participantIdRef.current;
     rejoinKeyRef.current = { pin: null, nickname, color, participantId: pid };
+    onLobbyCreatedRef.current = onCreated || null;
     socket.emit('create_lobby', { nickname, color, participantId: pid });
   }, []);
 
-  const joinLobby = useCallback((pin, nickname, color) => {
+  const joinLobby = useCallback((pin, nickname, color, onJoined) => {
     const socket = getSocket();
     if (!socket) return;
     const pid = participantIdRef.current;
     rejoinKeyRef.current = { pin, nickname, color, participantId: pid };
+    onLobbyJoinedRef.current = onJoined || null;
     socket.emit('join_lobby', { nickname, color, pin, participantId: pid });
   }, []);
 

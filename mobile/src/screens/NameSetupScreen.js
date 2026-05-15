@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef } from 'react';
 import {
   View,
   Text,
@@ -19,13 +19,11 @@ import { saveDisplayId } from '../services/storage';
 export default function NameSetupScreen({ navigation }) {
   const insets = useSafeAreaInsets();
   const { theme } = useTheme();
-  const { connect, connected } = useApp();
+  const { connected } = useApp();
   const [name, setName] = useState('');
   const [step, setStep] = useState('input');
   const [loading, setLoading] = useState(false);
   const confirmedName = useRef('');
-
-  useEffect(() => { connect(); }, [connect]);
 
   const handleCheck = async () => {
     const trimmed = name.trim();

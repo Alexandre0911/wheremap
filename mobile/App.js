@@ -3,7 +3,7 @@ import { View, ActivityIndicator } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import { AppProvider } from './src/context/AppContext';
+import { AppProvider, useApp } from './src/context/AppContext';
 import { ThemeProvider, useTheme } from './src/context/ThemeContext';
 import NameSetupScreen from './src/screens/NameSetupScreen';
 import HomeScreen from './src/screens/HomeScreen';
@@ -30,11 +30,14 @@ const linking = {
 
 function AppContent() {
   const { theme, isDark } = useTheme();
+  const { connect } = useApp();
   const [initialRoute, setInitialRoute] = useState(null);
 
   useEffect(() => {
     getDisplayId().then((id) => setInitialRoute(id ? 'Home' : 'NameSetup'));
   }, []);
+
+  useEffect(() => { connect(); }, [connect]);
 
   const navTheme = {
     dark: isDark,
